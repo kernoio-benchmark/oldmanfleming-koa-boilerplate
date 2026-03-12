@@ -9,10 +9,10 @@ COPY package*.json ./
 # Install all dependencies (including devDependencies for building)
 RUN npm ci
 
-# Copy source code
+# Copy source files and TypeScript configuration
 COPY . .
 
-# Build the application
+# Build TypeScript to JavaScript
 RUN npm run build
 
 # Production stage
@@ -31,10 +31,10 @@ COPY package*.json ./
 RUN npm ci --only=production && \
     npm cache clean --force
 
-# Copy built application from builder stage
+# Copy built files from builder stage
 COPY --from=builder /app/build ./build
 
-# Copy scripts directory if needed
+# Copy scripts directory (referenced in documentation)
 COPY scripts ./scripts
 
 # Expose the application port

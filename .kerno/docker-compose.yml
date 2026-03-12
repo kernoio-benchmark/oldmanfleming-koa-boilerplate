@@ -9,22 +9,22 @@ services:
         reservations:
           memory: 128M
     environment:
-      - "POSTGRES_USER=test_user"
-      - "POSTGRES_PASSWORD=test_password"
-      - "POSTGRES_DB=test_db"
+      - "POSTGRES_USER=realworld_user"
+      - "POSTGRES_PASSWORD=realworld_password"
+      - "POSTGRES_DB=realworld_db"
     ports:
       - "5432"
     healthcheck:
       test:
         - "CMD-SHELL"
-        - "pg_isready -U test_user -d test_db"
+        - "pg_isready -U realworld_user -d realworld_db"
       interval: "3s"
       timeout: "5s"
       retries: "10"
     tmpfs:
       - /var/lib/postgresql/data
     labels:
-      - external-url=postgresql://localhost:{{PORT}}/test_db?user=test_user&password=test_password
+      - external-url=postgresql://localhost:{{PORT}}/realworld_db?user=realworld_user&password=realworld_password
 
   sut:
     build:
@@ -41,14 +41,10 @@ services:
         # Install all dependencies (including devDependencies for building)
         RUN npm ci
 
-        # Copy source code
+        # Copy source files and TypeScript configuration
         COPY . .
 
-        # Patch App.ts to add synchronize option
-        RUN sed -i "s/entities: \[__dirname + '\/entities\/\*\.{ts,js}'\],/entities: [__dirname + '\/entities\/*.{ts,js}'], synchronize: true,/" src/App.ts && \
-            sed -i 's/app\.listen(process\.env\.PORT);/const server = app.listen(process.env.PORT);/' src/Server.ts
-
-        # Build the application
+        # Build TypeScript to JavaScript
         RUN npm run build
 
         # Production stage
@@ -67,17 +63,14 @@ services:
         RUN npm ci --only=production && \
             npm cache clean --force
 
-        # Copy built application from builder stage
+        # Copy built files from builder stage
         COPY --from=builder /app/build ./build
-
-        # Copy scripts directory if needed
-        COPY scripts ./scripts
 
         # Expose the application port
         EXPOSE 3000
 
-        # Start the application
-        CMD ["node", "build/src/Server.js"]
+        # Start the application  
+        CMD ["sh", "-c", "node --unhandled-rejections=strict build/src/Server.js"]
     depends_on:
       postgres:
         condition: service_healthy
